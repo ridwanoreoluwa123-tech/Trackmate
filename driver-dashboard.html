@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TrackMate — Driver Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --teal:#1D9E75; --teal-dark:#0F6E56; --teal-light:#E1F5EE;
+      --amber-light:#FEF5EB; --amber-dark:#B7600F;
+      --text-primary:#0F1A15; --text-secondary:#3D5248; --text-muted:#7A9189;
+      --bg:#F3F7F5; --white:#fff; --border:rgba(0,0,0,0.10);
+      --green-light:#EAF3DE; --green-mid:#3B6D11;
+      --blue-light:#E6F1FB; --blue-mid:#185FA5;
+      --red-light:#FCEBEB; --red-mid:#A32D2D;
+      --radius:12px;
+    }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text-primary); min-height:100vh; }
+
+    .topnav { background:var(--teal-dark); padding:0 1.5rem; display:flex; align-items:center; justify-content:space-between; height:58px; }
+    .nav-brand { display:flex; align-items:center; gap:8px; color:#fff; font-size:16px; font-weight:600; }
+    .nav-brand i { font-size:20px; }
+    .nav-right { display:flex; align-items:center; gap:12px; }
+    .nav-user { display:flex; align-items:center; gap:8px; color:rgba(255,255,255,0.85); font-size:13px; }
+    .nav-avatar { width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.2); color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; }
+    .status-toggle { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.12); border-radius:20px; padding:4px 12px; font-size:12px; color:#fff; cursor:pointer; border:none; font-family:inherit; }
+    .status-dot { width:7px; height:7px; border-radius:50%; transition:background 0.2s; }
+    .dot-on  { background:#5DCAA5; }
+    .dot-off { background:#D3D1C7; }
+    .btn-logout { background:rgba(255,255,255,0.12); border:none; color:#fff; padding:6px 12px; border-radius:8px; font-size:12px; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px; }
+    .btn-logout:hover { background:rgba(255,255,255,0.2); }
+
+    .page { padding:1.5rem; max-width:960px; margin:0 auto; }
+    .greeting { margin-bottom:1.5rem; }
+    .greeting h1 { font-family:'DM Serif Display',serif; font-size:26px; }
+    .greeting p  { font-size:14px; color:var(--text-muted); margin-top:4px; }
+
+    .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:1.5rem; }
+    .stat { background:var(--white); border:0.5px solid var(--border); border-radius:var(--radius); padding:1rem 1.25rem; }
+    .stat-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:8px; display:flex; align-items:center; gap:5px; }
+    .stat-val { font-family:'DM Serif Display',serif; font-size:28px; }
+    .stat-sub { font-size:11px; color:var(--text-muted); margin-top:3px; }
+
+    .content-grid { display:grid; grid-template-columns:1fr 320px; gap:16px; }
+    .card { background:var(--white); border:0.5px solid var(--border); border-radius:var(--radius); padding:1.25rem; }
+    .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+    .card-title { font-size:14px; font-weight:600; }
+
+    .delivery-item { border:0.5px solid var(--border); border-radius:10px; padding:1rem; margin-bottom:10px; transition:box-shadow 0.15s; }
+    .delivery-item:hover { box-shadow:0 2px 12px rgba(0,0,0,0.06); }
+    .delivery-item:last-child { margin-bottom:0; }
+    .d-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; }
+    .d-id { font-size:11px; font-weight:700; color:var(--text-muted); }
+    .d-customer { font-size:14px; font-weight:600; margin-top:2px; }
+    .badge { display:inline-block; font-size:11px; font-weight:500; padding:3px 9px; border-radius:20px; }
+    .b-transit { background:var(--blue-light);  color:var(--blue-mid); }
+    .b-pending  { background:var(--amber-light); color:var(--amber-dark); }
+    .b-done     { background:var(--green-light); color:var(--green-mid); }
+    .b-failed   { background:var(--red-light);   color:var(--red-mid); }
+    .d-route { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-secondary); background:var(--bg); border-radius:8px; padding:8px 10px; margin-bottom:10px; }
+    .d-route i { font-size:14px; color:var(--text-muted); }
+    .d-footer { display:flex; align-items:center; justify-content:space-between; }
+    .d-eta { font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:4px; }
+    .d-actions { display:flex; gap:6px; }
+    .btn-sm { padding:5px 12px; font-size:12px; font-weight:500; border-radius:8px; cursor:pointer; border:0.5px solid var(--border); background:var(--bg); color:var(--text-secondary); font-family:'DM Sans',sans-serif; display:flex; align-items:center; gap:4px; transition:background 0.12s; }
+    .btn-sm:hover { background:#e8ede9; }
+    .btn-sm-primary { background:var(--teal); color:#fff; border-color:var(--teal-dark); }
+    .btn-sm-primary:hover { background:var(--teal-dark); }
+
+    .summary-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:0.5px solid var(--border); }
+    .summary-row:last-child { border-bottom:none; }
+    .summary-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+    .si-teal  { background:var(--teal-light); color:var(--teal-dark); }
+    .si-amber { background:var(--amber-light); color:var(--amber-dark); }
+    .si-blue  { background:var(--blue-light); color:var(--blue-mid); }
+    .summary-label { font-size:13px; color:var(--text-secondary); flex:1; }
+    .summary-val { font-size:14px; font-weight:600; }
+    .quick-action { display:flex; align-items:center; gap:8px; padding:9px 12px; border-radius:8px; border:0.5px solid var(--border); background:none; color:var(--text-primary); font-size:13px; font-weight:500; cursor:pointer; width:100%; text-align:left; transition:background 0.12s; font-family:inherit; margin-bottom:8px; }
+    .quick-action:hover { background:var(--bg); }
+    .quick-action i { font-size:16px; color:var(--text-secondary); }
+
+    .empty-state { text-align:center; padding:2rem; color:var(--text-muted); font-size:13px; }
+    .loading-state { text-align:center; padding:2rem; color:var(--text-muted); font-size:13px; }
+
+    .toast { position:fixed; bottom:1.5rem; right:1.5rem; background:var(--text-primary); color:var(--white); padding:10px 18px; border-radius:10px; font-size:13px; font-weight:500; z-index:999; display:none; }
+    .toast.show { display:block; animation:fadeUp 0.2s ease; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+    @media (max-width:720px) {
+      .stats { grid-template-columns:1fr 1fr; }
+      .content-grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-brand"><i class="ti ti-truck-delivery"></i> TrackMate</div>
+  <div class="nav-right">
+    <button class="status-toggle" id="status-toggle" onclick="toggleStatus()">
+      <div class="status-dot dot-off" id="status-dot"></div>
+      <span id="status-label">Offline</span>
+    </button>
+    <div class="nav-user">
+      <div class="nav-avatar" id="user-initials">—</div>
+      <span id="user-name">Loading…</span>
+    </div>
+    <button class="btn-logout" onclick="logout()"><i class="ti ti-logout"></i> Sign out</button>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="greeting">
+    <h1 id="greeting-text">Loading…</h1>
+    <p id="greeting-sub">Checking your deliveries</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label"><i class="ti ti-package"></i> Assigned</div><div class="stat-val" id="s-assigned">—</div><div class="stat-sub">Today's total</div></div>
+    <div class="stat"><div class="stat-label"><i class="ti ti-circle-check"></i> Delivered</div><div class="stat-val" id="s-delivered">—</div><div class="stat-sub" style="color:var(--teal)">On time</div></div>
+    <div class="stat"><div class="stat-label"><i class="ti ti-clock"></i> Pending</div><div class="stat-val" id="s-pending">—</div><div class="stat-sub">In your queue</div></div>
+    <div class="stat"><div class="stat-label"><i class="ti ti-star"></i> Rating</div><div class="stat-val" id="s-rating">—</div><div class="stat-sub">This week</div></div>
+  </div>
+
+  <div class="content-grid">
+    <div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:1rem">My deliveries</div>
+      <div id="deliveries-list"><div class="loading-state"><i class="ti ti-loader"></i> Loading your deliveries…</div></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:0.75rem">Today's summary</div>
+        <div class="summary-row"><div class="summary-icon si-teal"><i class="ti ti-road"></i></div><div class="summary-label">Distance covered</div><div class="summary-val" id="sum-dist">—</div></div>
+        <div class="summary-row"><div class="summary-icon si-amber"><i class="ti ti-clock"></i></div><div class="summary-label">Time on road</div><div class="summary-val" id="sum-time">—</div></div>
+        <div class="summary-row"><div class="summary-icon si-blue"><i class="ti ti-coin"></i></div><div class="summary-label">Earnings today</div><div class="summary-val" id="sum-earn">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:0.75rem">Quick actions</div>
+        <button class="quick-action" onclick="showToast('Reporting issue…')"><i class="ti ti-alert-triangle"></i> Report an issue</button>
+        <button class="quick-action" onclick="showToast('Contacting support…')"><i class="ti ti-headset"></i> Contact support</button>
+        <button class="quick-action" style="color:var(--red-mid)" onclick="endShift()"><i class="ti ti-player-stop"></i> End shift</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── CONFIG ────────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://djmfgeffdrsqirhmmtzl.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbWZnZWZmZHJzcWlyaG1tdHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNTY4NjcsImV4cCI6MjA5MzkzMjg2N30.tKXStGnxMbdP9qu4T2sUPYPiNXvRFiS7xv7KqpBSlIc';
+  // ─────────────────────────────────────────────────────────────
+
+  const { createClient } = window.supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let currentUser = null;
+  let driverRecord = null;
+  let myOrders = [];
+
+  const statusBadge = {
+    transit:   { cls:'b-transit', label:'In transit' },
+    pending:   { cls:'b-pending', label:'Pending' },
+    delivered: { cls:'b-done',    label:'Delivered' },
+    failed:    { cls:'b-failed',  label:'Failed' },
+  };
+
+  async function init() {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: profile } = await db.from('profiles').select('*').eq('id', session.user.id).single();
+    if (!profile || profile.role !== 'driver') { window.location.href = 'login.html'; return; }
+
+    currentUser = profile;
+    const initials = profile.name.split(' ').map(w=>w[0]).join('').toUpperCase();
+    document.getElementById('user-initials').textContent = initials;
+    document.getElementById('user-name').textContent = profile.name;
+    const firstName = profile.name.split(' ')[0];
+    const hour = new Date().getHours();
+    const greet = hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+    document.getElementById('greeting-text').textContent = `${greet}, ${firstName} 👋`;
+    document.getElementById('greeting-sub').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) + ' — Your active shift';
+
+    // Load driver record
+    const { data: driver } = await db.from('drivers').select('*').eq('id', profile.id).single();
+    driverRecord = driver;
+    if (driver) {
+      document.getElementById('s-rating').textContent = driver.rating?.toFixed(1) || '5.0';
+      document.getElementById('sum-earn').textContent = `₦${(driver.earnings||0).toLocaleString()}`;
+      updateStatusUI(driver.status === 'online');
+    }
+
+    await loadMyOrders();
+    subscribeToMyOrders();
+  }
+
+  async function loadMyOrders() {
+    const { data, error } = await db
+      .from('orders')
+      .select('*')
+      .eq('driver_id', currentUser.id)
+      .order('created_at', { ascending: false });
+
+    if (error) { showToast('Failed to load orders'); return; }
+    myOrders = data || [];
+    updateStats();
+    renderDeliveries();
+  }
+
+  function updateStats() {
+    const assigned  = myOrders.length;
+    const delivered = myOrders.filter(o=>o.status==='delivered').length;
+    const pending   = myOrders.filter(o=>o.status==='pending'||o.status==='transit').length;
+    document.getElementById('s-assigned').textContent  = assigned;
+    document.getElementById('s-delivered').textContent = delivered;
+    document.getElementById('s-pending').textContent   = pending;
+    document.getElementById('sum-dist').textContent    = `${assigned * 12} km`;
+    document.getElementById('sum-time').textContent    = `${Math.floor(assigned * 0.8)}h ${assigned*15%60}m`;
+  }
+
+  function renderDeliveries() {
+    const list = document.getElementById('deliveries-list');
+    const active    = myOrders.filter(o=>o.status==='transit'||o.status==='pending');
+    const completed = myOrders.filter(o=>o.status==='delivered'||o.status==='failed');
+
+    if (!myOrders.length) {
+      list.innerHTML = '<div class="empty-state"><i class="ti ti-package" style="font-size:32px;display:block;margin:0 auto 8px"></i>No deliveries assigned yet</div>';
+      return;
+    }
+
+    let html = '';
+    active.forEach(o => {
+      const s = statusBadge[o.status];
+      html += `
+        <div class="delivery-item" id="order-${o.id}">
+          <div class="d-header">
+            <div><div class="d-id">#ORD-${o.id}</div><div class="d-customer">${o.customer}</div></div>
+            <span class="badge ${s.cls}">${s.label}</span>
+          </div>
+          <div class="d-route">
+            <i class="ti ti-map-pin"></i> ${o.pickup||'Pickup point'}
+            <span style="color:var(--text-muted)">→</span>
+            <i class="ti ti-flag"></i> ${o.destination}
+          </div>
+          <div class="d-footer">
+            <div class="d-eta"><i class="ti ti-clock"></i> ETA ${o.eta||'TBD'}</div>
+            <div class="d-actions">
+              <button class="btn-sm" onclick="showToast('Calling customer…')"><i class="ti ti-phone"></i> Call</button>
+              ${o.status==='pending'
+                ? `<button class="btn-sm btn-sm-primary" onclick="startDelivery(${o.id})"><i class="ti ti-navigation"></i> Start</button>`
+                : `<button class="btn-sm btn-sm-primary" onclick="markDelivered(${o.id})"><i class="ti ti-check"></i> Delivered</button>`
+              }
+            </div>
+          </div>
+        </div>`;
+    });
+
+    if (completed.length) {
+      html += `<div style="margin-top:1.25rem;margin-bottom:0.75rem;font-size:13px;font-weight:600;color:var(--text-muted)">Completed today</div>`;
+      completed.forEach(o => {
+        const s = statusBadge[o.status];
+        html += `
+          <div class="delivery-item" style="opacity:0.6">
+            <div class="d-header">
+              <div><div class="d-id">#ORD-${o.id}</div><div class="d-customer">${o.customer}</div></div>
+              <span class="badge ${s.cls}">${s.label}</span>
+            </div>
+            <div class="d-route">
+              <i class="ti ti-map-pin"></i> ${o.pickup||'Pickup'} <span style="color:var(--text-muted)">→</span> <i class="ti ti-flag"></i> ${o.destination}
+            </div>
+          </div>`;
+      });
+    }
+    list.innerHTML = html;
+  }
+
+  async function startDelivery(id) {
+    const { error } = await db.from('orders').update({ status:'transit' }).eq('id', id);
+    if (error) { showToast('Failed to update'); return; }
+    myOrders = myOrders.map(o => o.id===id ? {...o, status:'transit'} : o);
+    updateStats(); renderDeliveries();
+    showToast('Delivery started! Safe driving 🚗');
+  }
+
+  async function markDelivered(id) {
+    const { error } = await db.from('orders').update({
+      status:'delivered', delivered_at: new Date().toISOString()
+    }).eq('id', id);
+    if (error) { showToast('Failed to update'); return; }
+    myOrders = myOrders.map(o => o.id===id ? {...o, status:'delivered'} : o);
+    updateStats(); renderDeliveries();
+    showToast(`#ORD-${id} marked as delivered! ✓`);
+  }
+
+  // ── Status ────────────────────────────────────────────────────
+  let isOnline = false;
+  function updateStatusUI(online) {
+    isOnline = online;
+    document.getElementById('status-dot').className = `status-dot ${online?'dot-on':'dot-off'}`;
+    document.getElementById('status-label').textContent = online ? 'Online' : 'Offline';
+  }
+
+  async function toggleStatus() {
+    const newStatus = isOnline ? 'offline' : 'online';
+    if (currentUser) {
+      await db.from('drivers').update({ status: newStatus }).eq('id', currentUser.id);
+    }
+    updateStatusUI(!isOnline);
+    showToast(isOnline ? 'You are now offline' : 'You are now online');
+  }
+
+  // ── Realtime ──────────────────────────────────────────────────
+  function subscribeToMyOrders() {
+    if (!currentUser) return;
+    db.channel('my-orders')
+      .on('postgres_changes', {
+        event:'*', schema:'public', table:'orders',
+        filter:`driver_id=eq.${currentUser.id}`
+      }, async () => { await loadMyOrders(); })
+      .subscribe();
+  }
+
+  async function endShift() {
+    if (!confirm('End your shift for today?')) return;
+    await db.from('drivers').update({ status:'offline' }).eq('id', currentUser.id);
+    showToast('Shift ended. Great work today!');
+    setTimeout(() => logout(), 1500);
+  }
+
+  async function logout() {
+    await db.auth.signOut();
+    window.location.href = 'login.html';
+  }
+
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove('show'), 3000);
+  }
+
+  init();
+</script>
+</body>
+</html>

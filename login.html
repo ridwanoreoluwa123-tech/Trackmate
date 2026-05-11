@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TrackMate — Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --teal: #1D9E75; --teal-dark: #0F6E56; --teal-light: #E1F5EE;
+      --text-dark: #0F1A15; --text-mid: #3D5248; --text-light: #7A9189;
+      --bg: #F3F7F5; --white: #ffffff; --border: rgba(0,0,0,0.10);
+      --red: #C0392B; --red-light: #FDEDEC;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; display: flex; align-items: stretch; overflow: hidden; }
+
+    .panel-left {
+      width: 45%; background: var(--teal-dark);
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 3rem; position: relative; overflow: hidden;
+    }
+    .panel-left::before { content:''; position:absolute; top:-120px; right:-120px; width:400px; height:400px; border-radius:50%; background:rgba(255,255,255,0.04); }
+    .panel-left::after  { content:''; position:absolute; bottom:-80px; left:-80px; width:300px; height:300px; border-radius:50%; background:rgba(255,255,255,0.05); }
+    .brand { display:flex; align-items:center; gap:10px; color:#fff; font-size:22px; font-weight:600; position:relative; z-index:1; }
+    .brand i { font-size:26px; }
+    .panel-content { position:relative; z-index:1; }
+    .panel-headline { font-family:'DM Serif Display',serif; font-size:42px; line-height:1.15; color:#fff; margin-bottom:1.25rem; }
+    .panel-headline span { color:rgba(255,255,255,0.45); }
+    .panel-sub { font-size:15px; color:rgba(255,255,255,0.6); line-height:1.7; max-width:340px; }
+    .panel-stats { display:flex; gap:2rem; position:relative; z-index:1; }
+    .stat-num { font-family:'DM Serif Display',serif; font-size:32px; color:#fff; }
+    .stat-label { font-size:12px; color:rgba(255,255,255,0.5); margin-top:2px; }
+
+    .panel-right { flex:1; display:flex; align-items:center; justify-content:center; padding:2rem; }
+    .auth-box { width:100%; max-width:420px; }
+    .auth-heading { font-family:'DM Serif Display',serif; font-size:30px; color:var(--text-dark); margin-bottom:6px; }
+    .auth-sub { font-size:14px; color:var(--text-light); margin-bottom:2rem; }
+
+    .role-selector { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:1.5rem; }
+    .role-card { border:1.5px solid var(--border); border-radius:12px; padding:14px 16px; cursor:pointer; transition:all 0.18s; background:var(--white); display:flex; align-items:center; gap:10px; }
+    .role-card:hover { border-color:var(--teal); }
+    .role-card.selected { border-color:var(--teal); background:var(--teal-light); }
+    .role-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .ri-admin  { background:#E8F4FD; color:#1A6EA8; }
+    .ri-driver { background:#FEF5EB; color:#C17D0E; }
+    .role-title { font-size:13px; font-weight:600; color:var(--text-dark); }
+    .role-desc  { font-size:11px; color:var(--text-light); margin-top:1px; }
+    .role-check { margin-left:auto; font-size:16px; color:var(--teal); opacity:0; transition:opacity 0.15s; }
+    .role-card.selected .role-check { opacity:1; }
+
+    .form-group { margin-bottom:1rem; }
+    .form-label { display:block; font-size:12px; font-weight:600; color:var(--text-mid); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em; }
+    .input-wrap { position:relative; }
+    .input-wrap i { position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:16px; color:var(--text-light); pointer-events:none; }
+    .form-input { width:100%; padding:11px 12px 11px 40px; border:1.5px solid var(--border); border-radius:10px; background:var(--white); color:var(--text-dark); font-size:14px; font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.15s,box-shadow 0.15s; }
+    .form-input:focus { border-color:var(--teal); box-shadow:0 0 0 3px rgba(29,158,117,0.12); }
+    .input-toggle { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-light); font-size:16px; }
+
+    .form-options { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; }
+    .remember { display:flex; align-items:center; gap:7px; font-size:13px; color:var(--text-mid); cursor:pointer; }
+    .remember input { accent-color:var(--teal); }
+    .forgot { font-size:13px; color:var(--teal); text-decoration:none; font-weight:500; }
+
+    .btn-login { width:100%; padding:13px; background:var(--teal); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; font-family:'DM Sans',sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:background 0.15s; }
+    .btn-login:hover { background:var(--teal-dark); }
+    .btn-login:disabled { opacity:0.7; cursor:not-allowed; }
+
+    .spinner { width:18px; height:18px; border:2px solid rgba(255,255,255,0.35); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; display:none; }
+    .btn-login.loading .spinner { display:block; }
+    .btn-login.loading .btn-text { display:none; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .alert { display:none; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:500; margin-bottom:1rem; align-items:center; gap:8px; }
+    .alert.show { display:flex; }
+    .alert-error   { background:var(--red-light); color:var(--red); }
+    .alert-success { background:var(--teal-light); color:var(--teal-dark); }
+
+    .divider { display:flex; align-items:center; gap:12px; margin:1.25rem 0; }
+    .divider span { font-size:12px; color:var(--text-light); white-space:nowrap; }
+    .divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    .signup-link { text-align:center; font-size:13px; color:var(--text-light); }
+    .signup-link a { color:var(--teal); font-weight:500; text-decoration:none; }
+
+    @media (max-width:768px) {
+      body { flex-direction:column; overflow:auto; }
+      .panel-left { width:100%; padding:2rem; min-height:auto; }
+      .panel-headline { font-size:28px; }
+      .panel-right { padding:2rem 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="panel-left">
+  <div class="brand"><i class="ti ti-truck-delivery"></i> TrackMate</div>
+  <div class="panel-content">
+    <div class="panel-headline">Deliveries,<br><span>managed</span><br>brilliantly.</div>
+    <p class="panel-sub">Real-time fleet tracking, smart dispatch, and driver management — all in one platform.</p>
+  </div>
+  <div class="panel-stats">
+    <div><div class="stat-num" id="stat-orders">—</div><div class="stat-label">Orders today</div></div>
+    <div><div class="stat-num" id="stat-drivers">—</div><div class="stat-label">Active drivers</div></div>
+    <div><div class="stat-num">96%</div><div class="stat-label">On-time rate</div></div>
+  </div>
+</div>
+
+<div class="panel-right">
+  <div class="auth-box">
+    <h1 class="auth-heading">Welcome back</h1>
+    <p class="auth-sub">Sign in to your TrackMate account</p>
+
+    <div class="role-selector">
+      <div class="role-card selected" id="role-admin" onclick="selectRole('admin')">
+        <div class="role-icon ri-admin"><i class="ti ti-shield-check"></i></div>
+        <div><div class="role-title">Admin</div><div class="role-desc">Full dashboard</div></div>
+        <i class="ti ti-circle-check role-check"></i>
+      </div>
+      <div class="role-card" id="role-driver" onclick="selectRole('driver')">
+        <div class="role-icon ri-driver"><i class="ti ti-steering-wheel"></i></div>
+        <div><div class="role-title">Driver</div><div class="role-desc">My deliveries</div></div>
+        <i class="ti ti-circle-check role-check"></i>
+      </div>
+    </div>
+
+    <div class="alert alert-error" id="alert-error"><i class="ti ti-alert-circle"></i><span id="alert-text">Invalid email or password.</span></div>
+    <div class="alert alert-success" id="alert-success"><i class="ti ti-circle-check"></i><span id="alert-ok">Signing you in…</span></div>
+
+    <div class="form-group">
+      <label class="form-label">Email address</label>
+      <div class="input-wrap">
+        <i class="ti ti-mail"></i>
+        <input class="form-input" type="email" id="email" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <div class="input-wrap">
+        <i class="ti ti-lock"></i>
+        <input class="form-input" type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+        <button class="input-toggle" type="button" onclick="togglePwd()"><i class="ti ti-eye" id="eye-icon"></i></button>
+      </div>
+    </div>
+
+    <div class="form-options">
+      <label class="remember"><input type="checkbox" id="remember"/> Remember me</label>
+      <a class="forgot" href="#">Forgot password?</a>
+    </div>
+
+    <button class="btn-login" id="login-btn" onclick="handleLogin()">
+      <span class="btn-text"><i class="ti ti-login"></i> Sign in</span>
+      <div class="spinner"></div>
+    </button>
+
+    <div class="divider"><span>don't have an account?</span></div>
+    <p class="signup-link"><a href="#" onclick="showSignup()">Create account</a></p>
+  </div>
+</div>
+
+<script>
+  // ── CONFIG — replace with your Supabase credentials ──────────
+  const SUPABASE_URL = 'https://djmfgeffdrsqirhmmtzl.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbWZnZWZmZHJzcWlyaG1tdHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNTY4NjcsImV4cCI6MjA5MzkzMjg2N30.tKXStGnxMbdP9qu4T2sUPYPiNXvRFiS7xv7KqpBSlIc';
+  // ─────────────────────────────────────────────────────────────
+
+  const { createClient } = window.supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let selectedRole = 'admin';
+
+  function selectRole(role) {
+    selectedRole = role;
+    document.getElementById('role-admin').classList.toggle('selected', role === 'admin');
+    document.getElementById('role-driver').classList.toggle('selected', role === 'driver');
+  }
+
+  function togglePwd() {
+    const input = document.getElementById('password');
+    const icon  = document.getElementById('eye-icon');
+    input.type = input.type === 'password' ? 'text' : 'password';
+    icon.className = input.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off';
+  }
+
+  function showError(msg) {
+    document.getElementById('alert-text').textContent = msg;
+    document.getElementById('alert-error').classList.add('show');
+    document.getElementById('alert-success').classList.remove('show');
+  }
+  function showSuccess(msg) {
+    document.getElementById('alert-ok').textContent = msg;
+    document.getElementById('alert-success').classList.add('show');
+    document.getElementById('alert-error').classList.remove('show');
+  }
+
+  async function handleLogin() {
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn      = document.getElementById('login-btn');
+
+    document.getElementById('alert-error').classList.remove('show');
+    document.getElementById('alert-success').classList.remove('show');
+
+    if (!email)    { showError('Please enter your email address.'); return; }
+    if (!password) { showError('Please enter your password.'); return; }
+
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+      // Sign in with Supabase Auth
+      const { data, error } = await db.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+
+      // Fetch user profile to check role
+      const { data: profile, error: profileError } = await db
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError || !profile) throw new Error('Could not load user profile.');
+
+      // Check role matches selected
+      if (profile.role !== selectedRole) {
+        await db.auth.signOut();
+        selectRole(profile.role);
+        throw new Error(`This is a ${profile.role} account. Please select "${profile.role}" above.`);
+      }
+
+      showSuccess(`Welcome back, ${profile.name}! Redirecting…`);
+
+      setTimeout(() => {
+        window.location.href = profile.role === 'admin'
+          ? 'delivery-management.html'
+          : 'driver-dashboard.html';
+      }, 1000);
+
+    } catch (err) {
+      showError(err.message || 'Sign in failed. Please try again.');
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+
+  function showSignup() {
+    const email = prompt('Enter your email to create an account:');
+    if (!email) return;
+    const password = prompt('Choose a password (min 6 characters):');
+    if (!password) return;
+    const name = prompt('Your full name:');
+    const role = selectedRole;
+    registerUser(email, password, name, role);
+  }
+
+  async function registerUser(email, password, name, role) {
+    try {
+      const { error } = await db.auth.signUp({
+        email, password,
+        options: { data: { name, role } }
+      });
+      if (error) throw error;
+      alert('Account created! Check your email to confirm, then sign in.');
+    } catch (err) {
+      alert('Sign up failed: ' + err.message);
+    }
+  }
+
+  // Load live stats
+  async function loadStats() {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { count: orderCount } = await db.from('orders')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', today);
+      const { count: driverCount } = await db.from('drivers')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'online');
+      if (orderCount !== null) document.getElementById('stat-orders').textContent = orderCount;
+      if (driverCount !== null) document.getElementById('stat-drivers').textContent = driverCount;
+    } catch {}
+  }
+
+  // Check if already logged in
+  async function checkSession() {
+    const { data: { session } } = await db.auth.getSession();
+    if (session) {
+      const { data: profile } = await db.from('profiles').select('role').eq('id', session.user.id).single();
+      if (profile) {
+        window.location.href = profile.role === 'admin' ? 'delivery-management.html' : 'driver-dashboard.html';
+      }
+    }
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+  checkSession();
+  loadStats();
+</script>
+</body>
+</html>

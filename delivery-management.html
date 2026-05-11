@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TrackMate — Admin Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-primary: #ffffff; --bg-secondary: #f5f5f0; --bg-tertiary: #eeede8;
+      --text-primary: #1a1a18; --text-secondary: #5f5e5a; --text-tertiary: #888780;
+      --border: rgba(0,0,0,0.12); --border-md: rgba(0,0,0,0.20);
+      --teal: #1D9E75; --teal-light: #E1F5EE; --teal-dark: #0F6E56;
+      --blue-light: #E6F1FB; --blue-mid: #185FA5;
+      --amber-light: #FAEEDA; --amber-mid: #854F0B;
+      --purple-light: #EEEDFE; --purple-mid: #534AB7;
+      --green-light: #EAF3DE; --green-mid: #3B6D11;
+      --red-light: #FCEBEB; --red-mid: #A32D2D;
+      --gray-light: #F1EFE8; --gray-mid: #5F5E5A;
+      --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary:#1e1e1c; --bg-secondary:#272725; --bg-tertiary:#2e2e2c;
+        --text-primary:#f0ede8; --text-secondary:#a8a6a0; --text-tertiary:#6e6c68;
+        --border:rgba(255,255,255,0.10); --border-md:rgba(255,255,255,0.18);
+        --teal-light:#04342C; --blue-light:#042C53; --amber-light:#412402;
+        --purple-light:#26215C; --green-light:#173404; --red-light:#501313; --gray-light:#2C2C2A;
+      }
+    }
+    body { font-family:var(--font); background:var(--bg-tertiary); color:var(--text-primary); min-height:100vh; font-size:14px; }
+    .layout { display:flex; min-height:100vh; }
+
+    /* Sidebar */
+    .sidebar { width:220px; background:var(--bg-primary); border-right:0.5px solid var(--border); display:flex; flex-direction:column; padding:1.25rem 0; position:fixed; top:0; left:0; bottom:0; z-index:100; }
+    .logo { display:flex; align-items:center; gap:8px; padding:0 1.25rem 1.25rem; border-bottom:0.5px solid var(--border); margin-bottom:1rem; font-size:17px; font-weight:600; color:var(--text-primary); }
+    .logo i { font-size:22px; color:var(--teal); }
+    .nav-section { padding:0 0.75rem; margin-bottom:0.5rem; }
+    .nav-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-tertiary); padding:0 0.5rem 0.4rem; }
+    .nav-item { display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:var(--radius-md); cursor:pointer; color:var(--text-secondary); font-size:13px; font-weight:500; border:none; background:none; width:100%; text-align:left; transition:background 0.12s,color 0.12s; }
+    .nav-item i { font-size:17px; }
+    .nav-item:hover { background:var(--bg-secondary); color:var(--text-primary); }
+    .nav-item.active { background:var(--teal-light); color:var(--teal-dark); }
+    .sidebar-footer { margin-top:auto; padding:1rem 1.25rem 0; border-top:0.5px solid var(--border); }
+    .user-card { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .user-avatar { width:34px; height:34px; border-radius:50%; background:var(--teal-light); color:var(--teal-dark); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0; }
+    .user-name { font-size:13px; font-weight:500; }
+    .user-role { font-size:11px; color:var(--text-tertiary); }
+    .btn-logout { width:100%; display:flex; align-items:center; gap:6px; padding:8px 10px; border-radius:var(--radius-md); border:0.5px solid var(--border-md); background:none; color:var(--text-secondary); font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; }
+    .btn-logout:hover { background:var(--bg-secondary); }
+
+    /* Main */
+    .main { margin-left:220px; padding:1.75rem; flex:1; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; }
+    .page-title { font-size:20px; font-weight:600; }
+    .page-sub { font-size:13px; color:var(--text-secondary); margin-top:2px; }
+    .topbar-actions { display:flex; gap:8px; align-items:center; }
+
+    /* Buttons */
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:var(--radius-md); font-size:13px; font-weight:500; cursor:pointer; border:0.5px solid var(--border-md); background:var(--bg-primary); color:var(--text-primary); transition:background 0.12s; }
+    .btn:hover { background:var(--bg-secondary); }
+    .btn i { font-size:15px; }
+    .btn-primary { background:var(--teal); color:#fff; border-color:var(--teal-dark); }
+    .btn-primary:hover { background:var(--teal-dark); }
+    .btn-sm { padding:5px 10px; font-size:12px; }
+
+    /* Metrics */
+    .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:1.5rem; }
+    .metric { background:var(--bg-primary); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:1rem 1.25rem; }
+    .metric-label { font-size:12px; color:var(--text-secondary); display:flex; align-items:center; gap:5px; margin-bottom:8px; }
+    .metric-value { font-size:26px; font-weight:600; }
+    .metric-sub { font-size:11px; color:var(--text-tertiary); margin-top:3px; }
+
+    /* Cards */
+    .card { background:var(--bg-primary); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:1.25rem; }
+    .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+    .card-title { font-size:14px; font-weight:600; }
+    .content-grid { display:grid; grid-template-columns:1fr 300px; gap:16px; }
+    .side-col { display:flex; flex-direction:column; gap:16px; }
+
+    /* Tabs */
+    .tabs { display:flex; gap:4px; }
+    .tab { padding:5px 12px; font-size:12px; font-weight:500; border-radius:var(--radius-md); border:none; background:none; color:var(--text-secondary); cursor:pointer; transition:background 0.12s,color 0.12s; }
+    .tab.active { background:var(--teal-light); color:var(--teal-dark); }
+    .tab:hover:not(.active) { background:var(--bg-secondary); }
+
+    /* Search */
+    .search-row { display:flex; gap:8px; margin-bottom:1rem; }
+    .search-wrap { flex:1; display:flex; align-items:center; gap:8px; background:var(--bg-secondary); border:0.5px solid var(--border); border-radius:var(--radius-md); padding:0 12px; }
+    .search-wrap i { color:var(--text-tertiary); font-size:15px; }
+    .search-wrap input { border:none; background:none; outline:none; font-size:13px; color:var(--text-primary); width:100%; padding:8px 0; }
+    .search-wrap input::placeholder { color:var(--text-tertiary); }
+
+    /* Table */
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { text-align:left; padding:7px 10px; color:var(--text-tertiary); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:0.5px solid var(--border); }
+    td { padding:10px; border-bottom:0.5px solid var(--border); color:var(--text-primary); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tbody tr:hover td { background:var(--bg-secondary); }
+    .order-id { font-weight:600; font-size:12px; color:var(--text-secondary); }
+
+    /* Badges */
+    .badge { display:inline-block; font-size:11px; font-weight:500; padding:3px 9px; border-radius:20px; }
+    .b-success { background:var(--green-light); color:var(--green-mid); }
+    .b-warning { background:var(--amber-light); color:var(--amber-mid); }
+    .b-info    { background:var(--blue-light);  color:var(--blue-mid); }
+    .b-danger  { background:var(--red-light);   color:var(--red-mid); }
+    .b-gray    { background:var(--gray-light);  color:var(--gray-mid); }
+
+    /* Drivers */
+    .driver-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:0.5px solid var(--border); }
+    .driver-row:last-child { border-bottom:none; }
+    .avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0; }
+    .av-a { background:var(--teal-light);   color:var(--teal-dark); }
+    .av-b { background:var(--blue-light);   color:var(--blue-mid); }
+    .av-c { background:var(--amber-light);  color:var(--amber-mid); }
+    .av-d { background:var(--purple-light); color:var(--purple-mid); }
+    .driver-info { flex:1; min-width:0; }
+    .driver-name { font-size:13px; font-weight:500; }
+    .driver-detail { font-size:11px; color:var(--text-secondary); }
+    .status-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .dot-online  { background:var(--teal); }
+    .dot-offline { background:#D3D1C7; }
+    .progress-bar { height:3px; background:var(--bg-secondary); border-radius:2px; overflow:hidden; margin-top:5px; }
+    .progress-fill { height:100%; border-radius:2px; background:var(--teal); }
+
+    /* Quick actions */
+    .quick-action { display:flex; align-items:center; gap:8px; padding:9px 12px; border-radius:var(--radius-md); border:0.5px solid var(--border); background:none; color:var(--text-primary); font-size:13px; font-weight:500; cursor:pointer; width:100%; text-align:left; transition:background 0.12s; font-family:inherit; }
+    .quick-action:hover { background:var(--bg-secondary); }
+    .quick-action i { font-size:16px; color:var(--text-secondary); }
+
+    /* Modal */
+    .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:200; align-items:center; justify-content:center; }
+    .modal-backdrop.open { display:flex; }
+    .modal { background:var(--bg-primary); border-radius:var(--radius-lg); border:0.5px solid var(--border-md); padding:1.5rem; width:440px; max-width:90vw; }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; }
+    .modal-title { font-size:15px; font-weight:600; }
+    .modal-close { border:none; background:none; cursor:pointer; color:var(--text-secondary); font-size:18px; padding:2px; border-radius:var(--radius-sm); }
+    .form-group { margin-bottom:1rem; }
+    .form-label { font-size:12px; font-weight:500; color:var(--text-secondary); margin-bottom:5px; display:block; }
+    .form-input, .form-select { width:100%; padding:8px 12px; border:0.5px solid var(--border-md); border-radius:var(--radius-md); background:var(--bg-primary); color:var(--text-primary); font-size:13px; outline:none; transition:border-color 0.12s; font-family:inherit; }
+    .form-input:focus, .form-select:focus { border-color:var(--teal); }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .modal-footer { display:flex; justify-content:flex-end; gap:8px; margin-top:1.25rem; }
+
+    /* Toast */
+    .toast { position:fixed; bottom:1.5rem; right:1.5rem; background:var(--text-primary); color:var(--bg-primary); padding:10px 18px; border-radius:var(--radius-md); font-size:13px; font-weight:500; display:none; z-index:999; }
+    .toast.show { display:block; animation:fadeUp 0.2s ease; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+    /* Loading */
+    .loading-overlay { display:flex; align-items:center; justify-content:center; padding:3rem; color:var(--text-tertiary); font-size:13px; gap:8px; }
+
+    /* Live indicator */
+    .live-dot { width:7px; height:7px; border-radius:50%; background:var(--teal); animation:pulse 2s infinite; display:inline-block; margin-right:5px; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    @media (max-width:900px) {
+      .sidebar { display:none; }
+      .main { margin-left:0; padding:1rem; }
+      .metrics { grid-template-columns:repeat(2,1fr); }
+      .content-grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo"><i class="ti ti-truck-delivery"></i> TrackMate</div>
+    <div class="nav-section">
+      <div class="nav-label">Main</div>
+      <button class="nav-item active"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
+      <button class="nav-item" onclick="showToast('Orders page coming soon')"><i class="ti ti-package"></i> Orders</button>
+      <button class="nav-item" onclick="showToast('Drivers page coming soon')"><i class="ti ti-users"></i> Drivers</button>
+      <button class="nav-item" onclick="showToast('Routes page coming soon')"><i class="ti ti-route"></i> Routes</button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Admin</div>
+      <button class="nav-item" onclick="showToast('Analytics coming soon')"><i class="ti ti-chart-bar"></i> Analytics</button>
+      <button class="nav-item" onclick="showToast('Settings coming soon')"><i class="ti ti-settings"></i> Settings</button>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar" id="admin-avatar">—</div>
+        <div>
+          <div class="user-name" id="admin-name">Loading…</div>
+          <div class="user-role">Fleet Manager</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()"><i class="ti ti-logout"></i> Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Dashboard <span class="live-dot" title="Live data"></span></div>
+        <div class="page-sub" id="page-sub">Loading…</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn" onclick="exportCSV()"><i class="ti ti-download"></i> Export</button>
+        <button class="btn btn-primary" onclick="openModal()"><i class="ti ti-plus"></i> New Order</button>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric"><div class="metric-label"><i class="ti ti-package"></i> Total Orders</div><div class="metric-value" id="m-total">—</div><div class="metric-sub" id="m-total-sub">Today</div></div>
+      <div class="metric"><div class="metric-label"><i class="ti ti-clock"></i> In Transit</div><div class="metric-value" id="m-transit">—</div><div class="metric-sub">Active deliveries</div></div>
+      <div class="metric"><div class="metric-label"><i class="ti ti-circle-check"></i> Delivered</div><div class="metric-value" id="m-delivered">—</div><div class="metric-sub" id="m-rate">Loading…</div></div>
+      <div class="metric"><div class="metric-label"><i class="ti ti-users"></i> Active Drivers</div><div class="metric-value" id="m-drivers">—</div><div class="metric-sub">Online now</div></div>
+    </div>
+
+    <div class="content-grid">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Orders</span>
+          <div class="tabs">
+            <button class="tab active" onclick="filterOrders('all',this)">All</button>
+            <button class="tab" onclick="filterOrders('transit',this)">In Transit</button>
+            <button class="tab" onclick="filterOrders('pending',this)">Pending</button>
+            <button class="tab" onclick="filterOrders('delivered',this)">Delivered</button>
+            <button class="tab" onclick="filterOrders('failed',this)">Failed</button>
+          </div>
+        </div>
+        <div class="search-row">
+          <div class="search-wrap">
+            <i class="ti ti-search"></i>
+            <input type="text" id="search-input" placeholder="Search customer, destination…" oninput="applyFilters()">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Order</th><th>Customer</th><th>Destination</th><th>Driver</th><th>Status</th><th>ETA</th><th></th></tr></thead>
+            <tbody id="orders-body"><tr><td colspan="7"><div class="loading-overlay"><i class="ti ti-loader"></i> Loading orders…</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="side-col">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Drivers</span></div>
+          <div id="drivers-list"><div class="loading-overlay"><i class="ti ti-loader"></i> Loading…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px">Quick actions</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="quick-action" onclick="showToast('Auto-assigning routes…')"><i class="ti ti-route"></i> Auto-assign routes</button>
+            <button class="quick-action" onclick="filterOrders('failed',document.querySelectorAll('.tab')[4])"><i class="ti ti-alert-triangle"></i> View delays</button>
+            <button class="quick-action" onclick="showToast('Notifications sent!')"><i class="ti ti-bell"></i> Notify customers</button>
+            <button class="quick-action" onclick="exportCSV()"><i class="ti ti-download"></i> Export CSV</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- New Order Modal -->
+<div class="modal-backdrop" id="modal" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">New Delivery Order</span>
+      <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="form-group"><label class="form-label">Customer name</label><input class="form-input" type="text" id="f-customer" placeholder="e.g. Amara Osei"></div>
+    <div class="form-group"><label class="form-label">Pickup address</label><input class="form-input" type="text" id="f-pickup" placeholder="e.g. 14 Marina Street, Lagos Island"></div>
+    <div class="form-group"><label class="form-label">Destination</label><input class="form-input" type="text" id="f-dest" placeholder="e.g. Lekki Phase 1"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Assign driver</label>
+        <select class="form-select" id="f-driver"><option value="">— Unassigned —</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Priority</label>
+        <select class="form-select" id="f-priority"><option value="standard">Standard</option><option value="express">Express</option><option value="same-day">Same-day</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="create-btn" onclick="createOrder()"><i class="ti ti-plus"></i> Create order</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── CONFIG ────────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://djmfgeffdrsqirhmmtzl.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbWZnZWZmZHJzcWlyaG1tdHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNTY4NjcsImV4cCI6MjA5MzkzMjg2N30.tKXStGnxMbdP9qu4T2sUPYPiNXvRFiS7xv7KqpBSlIc';
+  // ─────────────────────────────────────────────────────────────
+
+  const { createClient } = window.supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let allOrders = [];
+  let allDrivers = [];
+  let activeFilter = 'all';
+  let currentUser = null;
+
+  const statusBadge = {
+    transit:   '<span class="badge b-info">In transit</span>',
+    delivered: '<span class="badge b-success">Delivered</span>',
+    pending:   '<span class="badge b-warning">Pending</span>',
+    failed:    '<span class="badge b-danger">Failed</span>',
+  };
+  const avatarColors = ['av-a','av-b','av-c','av-d'];
+
+  // ── Auth ──────────────────────────────────────────────────────
+  async function init() {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: profile } = await db.from('profiles').select('*').eq('id', session.user.id).single();
+    if (!profile || profile.role !== 'admin') { window.location.href = 'login.html'; return; }
+
+    currentUser = profile;
+    const initials = profile.name.split(' ').map(w=>w[0]).join('').toUpperCase();
+    document.getElementById('admin-avatar').textContent = initials;
+    document.getElementById('admin-name').textContent = profile.name;
+    document.getElementById('page-sub').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' }) + ' — Lagos operations';
+
+    await Promise.all([loadOrders(), loadDrivers()]);
+    subscribeToRealtime();
+  }
+
+  async function logout() {
+    await db.auth.signOut();
+    window.location.href = 'login.html';
+  }
+
+  // ── Orders ────────────────────────────────────────────────────
+  async function loadOrders() {
+    const { data, error } = await db
+      .from('orders')
+      .select('*, profiles(name)')
+      .order('created_at', { ascending: false });
+
+    if (error) { showToast('Failed to load orders'); return; }
+    allOrders = data || [];
+    updateMetrics();
+    applyFilters();
+  }
+
+  function updateMetrics() {
+    const total     = allOrders.length;
+    const transit   = allOrders.filter(o=>o.status==='transit').length;
+    const delivered = allOrders.filter(o=>o.status==='delivered').length;
+    const rate      = total > 0 ? Math.round((delivered/total)*100) : 0;
+    document.getElementById('m-total').textContent     = total;
+    document.getElementById('m-transit').textContent   = transit;
+    document.getElementById('m-delivered').textContent = delivered;
+    document.getElementById('m-rate').textContent      = `${rate}% on time`;
+  }
+
+  function renderOrders(data) {
+    const body = document.getElementById('orders-body');
+    if (!data.length) {
+      body.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-tertiary);padding:2rem">No orders found.</td></tr>`;
+      return;
+    }
+    body.innerHTML = data.map(o => `
+      <tr>
+        <td class="order-id">#ORD-${o.id}</td>
+        <td style="font-weight:500">${o.customer}</td>
+        <td style="color:var(--text-secondary)">${o.destination}</td>
+        <td>${o.profiles?.name || '—'}</td>
+        <td>${statusBadge[o.status] || ''}</td>
+        <td style="color:var(--text-secondary)">${o.eta || '—'}</td>
+        <td>
+          <select class="form-select" style="padding:4px 8px;font-size:11px;width:110px" onchange="updateOrderStatus(${o.id}, this.value)">
+            <option value="pending"   ${o.status==='pending'   ?'selected':''}>Pending</option>
+            <option value="transit"   ${o.status==='transit'   ?'selected':''}>In transit</option>
+            <option value="delivered" ${o.status==='delivered' ?'selected':''}>Delivered</option>
+            <option value="failed"    ${o.status==='failed'    ?'selected':''}>Failed</option>
+          </select>
+        </td>
+      </tr>`).join('');
+  }
+
+  function filterOrders(f, el) {
+    activeFilter = f;
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    if (el) el.classList.add('active');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    let data = allOrders;
+    if (activeFilter !== 'all') data = data.filter(o=>o.status===activeFilter);
+    if (q) data = data.filter(o =>
+      o.customer.toLowerCase().includes(q) ||
+      o.destination.toLowerCase().includes(q) ||
+      String(o.id).includes(q)
+    );
+    renderOrders(data);
+  }
+
+  async function updateOrderStatus(id, status) {
+    const { error } = await db.from('orders').update({ status }).eq('id', id);
+    if (error) { showToast('Failed to update order'); return; }
+    allOrders = allOrders.map(o => o.id===id ? {...o, status} : o);
+    updateMetrics();
+    showToast(`Order #ORD-${id} → ${status}`);
+  }
+
+  // ── Drivers ───────────────────────────────────────────────────
+  async function loadDrivers() {
+    const { data, error } = await db
+      .from('profiles')
+      .select('*, drivers(*)')
+      .eq('role', 'driver');
+
+    if (error) return;
+    allDrivers = data || [];
+
+    const onlineCount = allDrivers.filter(d=>d.drivers?.status==='online').length;
+    document.getElementById('m-drivers').textContent = onlineCount;
+
+    // Populate driver dropdown in modal
+    const sel = document.getElementById('f-driver');
+    sel.innerHTML = '<option value="">— Unassigned —</option>' +
+      allDrivers.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+
+    // Render driver list
+    const list = document.getElementById('drivers-list');
+    if (!allDrivers.length) { list.innerHTML = '<div class="loading-overlay">No drivers found</div>'; return; }
+    list.innerHTML = allDrivers.map((d,i)=>`
+      <div class="driver-row">
+        <div class="avatar ${avatarColors[i%4]}">${d.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+        <div class="driver-info">
+          <div class="driver-name">${d.name}</div>
+          <div class="driver-detail">${d.drivers?.active_orders||0} active · ${d.drivers?.status||'offline'}</div>
+          ${d.drivers?.status==='online'?`<div class="progress-bar"><div class="progress-fill" style="width:${Math.min((d.drivers?.active_orders||0)*25,100)}%"></div></div>`:''}
+        </div>
+        <div class="status-dot ${d.drivers?.status==='online'?'dot-online':'dot-offline'}"></div>
+      </div>`).join('');
+  }
+
+  // ── Create order ──────────────────────────────────────────────
+  async function createOrder() {
+    const customer = document.getElementById('f-customer').value.trim();
+    const pickup   = document.getElementById('f-pickup').value.trim();
+    const dest     = document.getElementById('f-dest').value.trim();
+    const driverId = document.getElementById('f-driver').value || null;
+    const priority = document.getElementById('f-priority').value;
+
+    if (!customer || !dest) { showToast('Customer and destination are required.'); return; }
+
+    const btn = document.getElementById('create-btn');
+    btn.disabled = true; btn.textContent = 'Creating…';
+
+    const { data, error } = await db.from('orders').insert([{
+      customer, pickup, destination: dest,
+      driver_id: driverId || null,
+      priority, status: 'pending'
+    }]).select('*, profiles(name)').single();
+
+    btn.disabled = false; btn.innerHTML = '<i class="ti ti-plus"></i> Create order';
+
+    if (error) { showToast('Failed to create order: ' + error.message); return; }
+
+    allOrders.unshift(data);
+    closeModal();
+    applyFilters();
+    updateMetrics();
+    showToast(`Order created for ${customer}!`);
+  }
+
+  // ── Realtime ──────────────────────────────────────────────────
+  function subscribeToRealtime() {
+    db.channel('orders-changes')
+      .on('postgres_changes', { event:'*', schema:'public', table:'orders' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          allOrders.unshift(payload.new);
+        } else if (payload.eventType === 'UPDATE') {
+          allOrders = allOrders.map(o => o.id===payload.new.id ? {...o, ...payload.new} : o);
+        } else if (payload.eventType === 'DELETE') {
+          allOrders = allOrders.filter(o => o.id !== payload.old.id);
+        }
+        updateMetrics();
+        applyFilters();
+      }).subscribe();
+  }
+
+  // ── Export CSV ────────────────────────────────────────────────
+  function exportCSV() {
+    const header = ['Order ID','Customer','Destination','Driver','Status','ETA','Priority','Created'];
+    const rows = allOrders.map(o => [
+      `#ORD-${o.id}`, o.customer, o.destination,
+      o.profiles?.name||'Unassigned', o.status, o.eta||'—', o.priority,
+      new Date(o.created_at).toLocaleString()
+    ]);
+    const csv = [header,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download = `trackmate-orders-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    showToast('Report exported!');
+  }
+
+  // ── Modal ─────────────────────────────────────────────────────
+  function openModal() { document.getElementById('modal').classList.add('open'); }
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+    ['f-customer','f-pickup','f-dest'].forEach(id=>document.getElementById(id).value='');
+  }
+  function closeModalOutside(e) { if(e.target===document.getElementById('modal')) closeModal(); }
+
+  // ── Toast ─────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove('show'), 3000);
+  }
+
+  init();
+</script>
+</body>
+</html>

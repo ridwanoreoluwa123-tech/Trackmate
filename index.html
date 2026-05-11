@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TrackMate</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: Arial, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+    /* Sidebar — hidden by default until logged in */
+    .sidebar {
+      width: 220px;
+      background: #0F6E56;
+      color: white;
+      padding: 1rem;
+      display: none; /* hidden until logged in */
+      flex-direction: column;
+      gap: 6px;
+    }
+    .sidebar.visible { display: flex; }
+
+    .sidebar-brand {
+      font-size: 18px; font-weight: 700;
+      padding: 0.5rem 0 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+      margin-bottom: 0.5rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .nav-label {
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.5);
+      padding: 0.5rem 0 0.25rem 0.5rem;
+    }
+
+    .sidebar button {
+      padding: 10px 12px;
+      border: none; cursor: pointer;
+      border-radius: 8px;
+      font-weight: 500; font-size: 13px;
+      background: transparent; color: rgba(255,255,255,0.85);
+      text-align: left; width: 100%;
+      display: flex; align-items: center; gap: 8px;
+      transition: background 0.15s;
+    }
+    .sidebar button:hover { background: rgba(255,255,255,0.12); color: white; }
+    .sidebar button.active { background: rgba(255,255,255,0.18); color: white; }
+
+    .sidebar-footer {
+      margin-top: auto;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      padding-top: 1rem;
+    }
+    .user-info {
+      font-size: 12px; color: rgba(255,255,255,0.7);
+      padding: 0 0.25rem 0.75rem;
+    }
+    .user-info strong { display: block; color: white; font-size: 13px; }
+
+    .btn-logout {
+      background: rgba(255,255,255,0.1) !important;
+      color: rgba(255,255,255,0.8) !important;
+    }
+    .btn-logout:hover { background: rgba(255,255,255,0.2) !important; }
+
+    /* Main iframe area */
+    .main { flex: 1; height: 100vh; }
+    iframe { width: 100%; height: 100%; border: none; }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      .sidebar {
+        width: 100%; flex-direction: row;
+        overflow-x: auto; padding: 0.5rem;
+        flex-wrap: nowrap; align-items: center;
+        height: auto;
+      }
+      .sidebar-brand { padding: 0 0.5rem 0 0; border: none; margin: 0; font-size: 15px; }
+      .nav-label { display: none; }
+      .sidebar-footer { margin: 0; border: none; padding: 0; display: flex; align-items: center; gap: 6px; margin-left: auto; }
+      .user-info { display: none; }
+      .sidebar button { min-width: auto; padding: 8px 12px; white-space: nowrap; }
+      .main { height: calc(100vh - 60px); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar (shown after login) -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">🚚 TrackMate</div>
+
+    <div class="nav-label" id="nav-section-label">Main</div>
+    <button id="btn-dashboard" onclick="loadPage('delivery-management.html', this)">📦 Dashboard</button>
+    <button id="btn-driver" onclick="loadPage('driver-dashboard.html', this)" style="display:none">🚗 My Deliveries</button>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        Signed in as<strong id="sidebar-user">—</strong>
+      </div>
+      <button class="btn-logout" onclick="logout()">🚪 Sign out</button>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+    <iframe id="frame" src="login.html"></iframe>
+  </div>
+
+  <script>
+    // ── Supabase ──────────────────────────────────────────────
+    const SUPABASE_URL = 'https://djmfgeffdrsqirhmmtzl.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbWZnZWZmZHJzcWlyaG1tdHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNTY4NjcsImV4cCI6MjA5MzkzMjg2N30.tKXStGnxMbdP9qu4T2sUPYPiNXvRFiS7xv7KqpBSlIc';
+    const { createClient } = window.supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const frame    = document.getElementById('frame');
+    const sidebar  = document.getElementById('sidebar');
+    let currentUser = null;
+
+    // ── Check session on load ─────────────────────────────────
+    async function checkSession() {
+      const { data: { session } } = await db.auth.getSession();
+      if (session) {
+        const { data: profile } = await db
+          .from('profiles').select('*').eq('id', session.user.id).single();
+        if (profile) {
+          showDashboard(profile);
+        } else {
+          showLogin();
+        }
+      } else {
+        showLogin();
+      }
+    }
+
+    // ── Listen for auth changes (login/logout from iframe) ────
+    db.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const { data: profile } = await db
+          .from('profiles').select('*').eq('id', session.user.id).single();
+        if (profile) showDashboard(profile);
+      } else if (event === 'SIGNED_OUT') {
+        showLogin();
+      }
+    });
+
+    function showLogin() {
+      currentUser = null;
+      sidebar.classList.remove('visible');
+      frame.src = 'login.html';
+    }
+
+    function showDashboard(profile) {
+      currentUser = profile;
+      sidebar.classList.add('visible');
+      document.getElementById('sidebar-user').textContent = profile.name;
+
+      if (profile.role === 'admin') {
+        document.getElementById('btn-dashboard').style.display = 'flex';
+        document.getElementById('btn-driver').style.display = 'none';
+        loadPage('delivery-management.html', document.getElementById('btn-dashboard'));
+      } else {
+        document.getElementById('btn-dashboard').style.display = 'none';
+        document.getElementById('btn-driver').style.display = 'flex';
+        loadPage('driver-dashboard.html', document.getElementById('btn-driver'));
+      }
+    }
+
+    function loadPage(page, btn) {
+      frame.src = page;
+      document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+    }
+
+    async function logout() {
+      await db.auth.signOut();
+      showLogin();
+    }
+
+    checkSession();
+  </script>
+</body>
+</html>
