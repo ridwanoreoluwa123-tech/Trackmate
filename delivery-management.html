@@ -31,7 +31,8 @@
         --purple-light:#26215C; --green-light:#173404; --red-light:#501313; --gray-light:#2C2C2A;
       }
     }
-    body { font-family:var(--font); background:var(--bg-tertiary); color:var(--text-primary); min-height:100vh; font-size:14px; }
+    body { font-family:var(--font); background:var(--bg-tertiary); color:var(--text-primary); min-height:100vh; font-size:14px; opacity:0; transition:opacity 0.2s ease; }
+    body.ready { opacity:1; }
     .layout { display:flex; min-height:100vh; }
 
     /* Sidebar */
@@ -563,6 +564,7 @@
 
     await Promise.all([loadOrders(), loadDrivers()]);
     subscribeToRealtime();
+    document.body.classList.add('ready');
   }
 
   async function logout() {
@@ -710,18 +712,16 @@
   }
 
   // ── Realtime ──────────────────────────────────────────────────
+  // 25002500 Realtime 2500250025002500
+  let realtimeTimeout = null;
+  let realtimeTimeout = null;
   function subscribeToRealtime() {
     db.channel('orders-changes')
-      .on('postgres_changes', { event:'*', schema:'public', table:'orders' }, payload => {
-        if (payload.eventType === 'INSERT') {
-          allOrders.unshift(payload.new);
-        } else if (payload.eventType === 'UPDATE') {
-          allOrders = allOrders.map(o => o.id===payload.new.id ? {...o, ...payload.new} : o);
-        } else if (payload.eventType === 'DELETE') {
-          allOrders = allOrders.filter(o => o.id !== payload.old.id);
-        }
-        updateMetrics();
-        applyFilters();
+      .on('postgres_changes', { event:'*', schema:'public', table:'orders' }, () => {
+        clearTimeout(realtimeTimeout);
+        realtimeTimeout = setTimeout(async () => {
+          await loadOrders();
+        }, 2000);
       }).subscribe();
   }
 
