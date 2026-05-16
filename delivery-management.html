@@ -174,15 +174,15 @@
     <div class="logo"><i class="ti ti-truck-delivery"></i> TrackMate</div>
     <div class="nav-section">
       <div class="nav-label">Main</div>
-      <button class="nav-item active"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
-      <button class="nav-item" onclick="showToast('Orders page coming soon')"><i class="ti ti-package"></i> Orders</button>
-      <button class="nav-item" onclick="showToast('Drivers page coming soon')"><i class="ti ti-users"></i> Drivers</button>
-      <button class="nav-item" onclick="showToast('Routes page coming soon')"><i class="ti ti-route"></i> Routes</button>
+      <button class="nav-item active" onclick="showPage('dashboard',this)"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
+      <button class="nav-item" onclick="showPage('orders',this)"><i class="ti ti-package"></i> Orders</button>
+      <button class="nav-item" onclick="showPage('drivers',this)"><i class="ti ti-users"></i> Drivers</button>
+      <button class="nav-item" onclick="showPage('routes',this)"><i class="ti ti-route"></i> Routes</button>
     </div>
     <div class="nav-section">
       <div class="nav-label">Admin</div>
-      <button class="nav-item" onclick="showToast('Analytics coming soon')"><i class="ti ti-chart-bar"></i> Analytics</button>
-      <button class="nav-item" onclick="showToast('Settings coming soon')"><i class="ti ti-settings"></i> Settings</button>
+      <button class="nav-item" onclick="showPage('analytics',this)"><i class="ti ti-chart-bar"></i> Analytics</button>
+      <button class="nav-item" onclick="showPage('settings',this)"><i class="ti ti-settings"></i> Settings</button>
     </div>
     <div class="sidebar-footer">
       <div class="user-card">
@@ -197,6 +197,9 @@
   </aside>
 
   <main class="main">
+
+    <!-- ── DASHBOARD PAGE ── -->
+    <div id="page-dashboard">
     <div class="topbar">
       <div>
         <div class="page-title">Dashboard <span class="live-dot" title="Live data"></span></div>
@@ -207,18 +210,16 @@
         <button class="btn btn-primary" onclick="openModal()"><i class="ti ti-plus"></i> New Order</button>
       </div>
     </div>
-
     <div class="metrics">
-      <div class="metric"><div class="metric-label"><i class="ti ti-package"></i> Total Orders</div><div class="metric-value" id="m-total">—</div><div class="metric-sub" id="m-total-sub">Today</div></div>
+      <div class="metric"><div class="metric-label"><i class="ti ti-package"></i> Total Orders</div><div class="metric-value" id="m-total">—</div><div class="metric-sub">Today</div></div>
       <div class="metric"><div class="metric-label"><i class="ti ti-clock"></i> In Transit</div><div class="metric-value" id="m-transit">—</div><div class="metric-sub">Active deliveries</div></div>
       <div class="metric"><div class="metric-label"><i class="ti ti-circle-check"></i> Delivered</div><div class="metric-value" id="m-delivered">—</div><div class="metric-sub" id="m-rate">Loading…</div></div>
       <div class="metric"><div class="metric-label"><i class="ti ti-users"></i> Active Drivers</div><div class="metric-value" id="m-drivers">—</div><div class="metric-sub">Online now</div></div>
     </div>
-
     <div class="content-grid">
       <div class="card">
         <div class="card-header">
-          <span class="card-title">Orders</span>
+          <span class="card-title">Recent Orders</span>
           <div class="tabs">
             <button class="tab active" onclick="filterOrders('all',this)">All</button>
             <button class="tab" onclick="filterOrders('transit',this)">In Transit</button>
@@ -228,24 +229,15 @@
           </div>
         </div>
         <div class="search-row">
-          <div class="search-wrap">
-            <i class="ti ti-search"></i>
-            <input type="text" id="search-input" placeholder="Search customer, destination…" oninput="applyFilters()">
-          </div>
+          <div class="search-wrap"><i class="ti ti-search"></i><input type="text" id="search-input" placeholder="Search customer, destination…" oninput="applyFilters()"></div>
         </div>
         <div class="table-wrap">
-          <table>
-            <thead><tr><th>Order</th><th>Customer</th><th>Destination</th><th>Driver</th><th>Status</th><th>ETA</th><th></th></tr></thead>
-            <tbody id="orders-body"><tr><td colspan="7"><div class="loading-overlay"><i class="ti ti-loader"></i> Loading orders…</div></td></tr></tbody>
-          </table>
+          <table><thead><tr><th>Order</th><th>Customer</th><th>Destination</th><th>Driver</th><th>Status</th><th>ETA</th><th></th></tr></thead>
+          <tbody id="orders-body"><tr><td colspan="7"><div class="loading-overlay"><i class="ti ti-loader"></i> Loading orders…</div></td></tr></tbody></table>
         </div>
       </div>
-
       <div class="side-col">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Drivers</span></div>
-          <div id="drivers-list"><div class="loading-overlay"><i class="ti ti-loader"></i> Loading…</div></div>
-        </div>
+        <div class="card"><div class="card-header"><span class="card-title">Drivers</span></div><div id="drivers-list"><div class="loading-overlay"><i class="ti ti-loader"></i> Loading…</div></div></div>
         <div class="card">
           <div class="card-title" style="margin-bottom:12px">Quick actions</div>
           <div style="display:flex;flex-direction:column;gap:8px">
@@ -254,6 +246,128 @@
             <button class="quick-action" onclick="showToast('Notifications sent!')"><i class="ti ti-bell"></i> Notify customers</button>
             <button class="quick-action" onclick="exportCSV()"><i class="ti ti-download"></i> Export CSV</button>
           </div>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- ── ORDERS PAGE ── -->
+    <div id="page-orders" style="display:none">
+      <div class="topbar">
+        <div><div class="page-title">Orders</div><div class="page-sub">Manage all delivery orders</div></div>
+        <div class="topbar-actions">
+          <button class="btn" onclick="exportCSV()"><i class="ti ti-download"></i> Export</button>
+          <button class="btn btn-primary" onclick="openModal()"><i class="ti ti-plus"></i> New Order</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="search-row" style="margin-bottom:1rem">
+          <div class="search-wrap"><i class="ti ti-search"></i><input type="text" id="orders-search" placeholder="Search orders…" oninput="applyOrdersFilter()"></div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Order</th><th>Customer</th><th>Pickup</th><th>Destination</th><th>Driver</th><th>Priority</th><th>Status</th><th>Created</th><th></th></tr></thead>
+          <tbody id="orders-full-body"><tr><td colspan="9"><div class="loading-overlay">Loading…</div></td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DRIVERS PAGE ── -->
+    <div id="page-drivers" style="display:none">
+      <div class="topbar">
+        <div><div class="page-title">Drivers</div><div class="page-sub">Manage your driver fleet</div></div>
+        <div class="topbar-actions">
+          <button class="btn btn-primary" onclick="showToast('Invite sent to driver!')"><i class="ti ti-user-plus"></i> Add Driver</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table><thead><tr><th>Driver</th><th>Email</th><th>Status</th><th>Active Orders</th><th>Total Deliveries</th><th>Rating</th><th>Earnings</th></tr></thead>
+          <tbody id="drivers-full-body"><tr><td colspan="7"><div class="loading-overlay">Loading…</div></td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ROUTES PAGE ── -->
+    <div id="page-routes" style="display:none">
+      <div class="topbar">
+        <div><div class="page-title">Routes</div><div class="page-sub">Active delivery routes</div></div>
+        <div class="topbar-actions">
+          <button class="btn btn-primary" onclick="showToast('Auto-assigning routes…')"><i class="ti ti-route"></i> Auto-assign</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table><thead><tr><th>Order</th><th>Customer</th><th>Pickup</th><th>Destination</th><th>Driver</th><th>Status</th><th>ETA</th></tr></thead>
+          <tbody id="routes-body"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ANALYTICS PAGE ── -->
+    <div id="page-analytics" style="display:none">
+      <div class="topbar">
+        <div><div class="page-title">Analytics</div><div class="page-sub">Performance overview</div></div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><div class="metric-label"><i class="ti ti-package"></i> Total Orders</div><div class="metric-value" id="a-total">—</div><div class="metric-sub">All time</div></div>
+        <div class="metric"><div class="metric-label"><i class="ti ti-circle-check"></i> Delivered</div><div class="metric-value" id="a-delivered">—</div><div class="metric-sub" id="a-rate">—</div></div>
+        <div class="metric"><div class="metric-label"><i class="ti ti-alert-triangle"></i> Failed</div><div class="metric-value" id="a-failed">—</div><div class="metric-sub">Need attention</div></div>
+        <div class="metric"><div class="metric-label"><i class="ti ti-users"></i> Total Drivers</div><div class="metric-value" id="a-drivers">—</div><div class="metric-sub">Registered</div></div>
+      </div>
+      <div class="content-grid">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:1rem">Orders by Status</div>
+          <div id="status-breakdown" style="display:flex;flex-direction:column;gap:10px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:1rem">Priority Breakdown</div>
+          <div id="priority-breakdown" style="display:flex;flex-direction:column;gap:10px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS PAGE ── -->
+    <div id="page-settings" style="display:none">
+      <div class="topbar">
+        <div><div class="page-title">Settings</div><div class="page-sub">Manage your account and preferences</div></div>
+      </div>
+      <div class="content-grid">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="card">
+            <div class="card-title" style="margin-bottom:1rem">Account Details</div>
+            <div class="form-group"><label class="form-label">Full name</label><input class="form-input" id="s-name" type="text" placeholder="Your name"/></div>
+            <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="s-email" type="email" placeholder="Your email" disabled style="opacity:0.6"/></div>
+            <div class="form-group"><label class="form-label">Role</label><input class="form-input" id="s-role" type="text" disabled style="opacity:0.6"/></div>
+            <button class="btn btn-primary" onclick="showToast('Settings saved!')"><i class="ti ti-check"></i> Save changes</button>
+          </div>
+          <div class="card">
+            <div class="card-title" style="margin-bottom:1rem">Change Password</div>
+            <div class="form-group"><label class="form-label">New password</label><input class="form-input" type="password" placeholder="Min 6 characters"/></div>
+            <div class="form-group"><label class="form-label">Confirm password</label><input class="form-input" type="password" placeholder="Repeat password"/></div>
+            <button class="btn btn-primary" onclick="showToast('Password updated!')"><i class="ti ti-lock"></i> Update password</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:1rem">Preferences</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">
+              <span>Email notifications</span>
+              <input type="checkbox" checked style="accent-color:var(--teal);width:16px;height:16px"/>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">
+              <span>SMS alerts</span>
+              <input type="checkbox" style="accent-color:var(--teal);width:16px;height:16px"/>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">
+              <span>Auto-assign drivers</span>
+              <input type="checkbox" checked style="accent-color:var(--teal);width:16px;height:16px"/>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">
+              <span>Daily report email</span>
+              <input type="checkbox" checked style="accent-color:var(--teal);width:16px;height:16px"/>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:1.25rem;width:100%;justify-content:center" onclick="showToast('Preferences saved!')"><i class="ti ti-check"></i> Save preferences</button>
         </div>
       </div>
     </div>
@@ -308,6 +422,130 @@
     failed:    '<span class="badge b-danger">Failed</span>',
   };
   const avatarColors = ['av-a','av-b','av-c','av-d'];
+
+  // ── Page navigation ───────────────────────────────────────
+  const pages = ['dashboard','orders','drivers','routes','analytics','settings'];
+  function showPage(page, btn) {
+    pages.forEach(p => {
+      const el = document.getElementById('page-' + p);
+      if (el) el.style.display = p === page ? '' : 'none';
+    });
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    if (page === 'orders') renderFullOrders();
+    if (page === 'drivers') renderFullDrivers();
+    if (page === 'routes') renderRoutes();
+    if (page === 'analytics') renderAnalytics();
+    if (page === 'settings') loadSettings();
+  }
+
+  function renderFullOrders() {
+    const q = (document.getElementById('orders-search')?.value || '').toLowerCase();
+    const data = q ? allOrders.filter(o => o.customer.toLowerCase().includes(q) || o.destination.toLowerCase().includes(q)) : allOrders;
+    const body = document.getElementById('orders-full-body');
+    if (!data.length) { body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-tertiary)">No orders found</td></tr>`; return; }
+    body.innerHTML = data.map(o => `<tr>
+      <td class="order-id">#ORD-${o.id}</td>
+      <td style="font-weight:500">${o.customer}</td>
+      <td style="color:var(--text-secondary)">${o.pickup||'—'}</td>
+      <td>${o.destination}</td>
+      <td>${o.profiles?.name||'Unassigned'}</td>
+      <td><span class="badge b-gray">${o.priority||'standard'}</span></td>
+      <td>${statusBadge[o.status]||''}</td>
+      <td style="color:var(--text-tertiary);font-size:11px">${new Date(o.created_at).toLocaleDateString()}</td>
+      <td><select class="form-select" style="padding:4px 8px;font-size:11px;width:110px" onchange="updateOrderStatus(${o.id},this.value)">
+        <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
+        <option value="transit" ${o.status==='transit'?'selected':''}>In transit</option>
+        <option value="delivered" ${o.status==='delivered'?'selected':''}>Delivered</option>
+        <option value="failed" ${o.status==='failed'?'selected':''}>Failed</option>
+      </select></td>
+    </tr>`).join('');
+  }
+
+  function applyOrdersFilter() { renderFullOrders(); }
+
+  function renderFullDrivers() {
+    const body = document.getElementById('drivers-full-body');
+    if (!allDrivers.length) { body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-tertiary)">No drivers found</td></tr>`; return; }
+    const colors = ['av-a','av-b','av-c','av-d'];
+    body.innerHTML = allDrivers.map((d,i) => `<tr>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div class="avatar ${colors[i%4]}" style="width:30px;height:30px;font-size:11px">${d.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+        <span style="font-weight:500">${d.name}</span>
+      </div></td>
+      <td style="color:var(--text-secondary)">${d.email||'—'}</td>
+      <td><span class="badge ${d.drivers?.status==='online'?'b-success':'b-gray'}">${d.drivers?.status||'offline'}</span></td>
+      <td style="text-align:center">${d.drivers?.active_orders||0}</td>
+      <td style="text-align:center">${d.drivers?.total_deliveries||0}</td>
+      <td>⭐ ${d.drivers?.rating?.toFixed(1)||'5.0'}</td>
+      <td>₦${(d.drivers?.earnings||0).toLocaleString()}</td>
+    </tr>`).join('');
+  }
+
+  function renderRoutes() {
+    const active = allOrders.filter(o => o.status==='transit'||o.status==='pending');
+    const body = document.getElementById('routes-body');
+    if (!active.length) { body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-tertiary)">No active routes</td></tr>`; return; }
+    body.innerHTML = active.map(o => `<tr>
+      <td class="order-id">#ORD-${o.id}</td>
+      <td style="font-weight:500">${o.customer}</td>
+      <td style="color:var(--text-secondary)">${o.pickup||'—'}</td>
+      <td>${o.destination}</td>
+      <td>${o.profiles?.name||'Unassigned'}</td>
+      <td>${statusBadge[o.status]||''}</td>
+      <td style="color:var(--text-secondary)">${o.eta||'—'}</td>
+    </tr>`).join('');
+  }
+
+  function renderAnalytics() {
+    const total     = allOrders.length;
+    const delivered = allOrders.filter(o=>o.status==='delivered').length;
+    const failed    = allOrders.filter(o=>o.status==='failed').length;
+    const rate      = total > 0 ? Math.round((delivered/total)*100) : 0;
+    document.getElementById('a-total').textContent     = total;
+    document.getElementById('a-delivered').textContent = delivered;
+    document.getElementById('a-failed').textContent    = failed;
+    document.getElementById('a-drivers').textContent   = allDrivers.length;
+    document.getElementById('a-rate').textContent      = `${rate}% success rate`;
+
+    const statuses = ['pending','transit','delivered','failed'];
+    const statusColors = {'pending':'#854F0B','transit':'#185FA5','delivered':'#3B6D11','failed':'#A32D2D'};
+    document.getElementById('status-breakdown').innerHTML = statuses.map(s => {
+      const count = allOrders.filter(o=>o.status===s).length;
+      const pct   = total > 0 ? Math.round((count/total)*100) : 0;
+      return `<div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span style="text-transform:capitalize">${s}</span><span style="font-weight:600">${count} (${pct}%)</span>
+        </div>
+        <div style="height:6px;background:var(--bg-secondary);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${statusColors[s]};border-radius:3px"></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const priorities = ['standard','express','same-day'];
+    const priColors  = ['#534AB7','#185FA5','#854F0B'];
+    document.getElementById('priority-breakdown').innerHTML = priorities.map((p,i) => {
+      const count = allOrders.filter(o=>o.priority===p).length;
+      const pct   = total > 0 ? Math.round((count/total)*100) : 0;
+      return `<div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span style="text-transform:capitalize">${p}</span><span style="font-weight:600">${count} (${pct}%)</span>
+        </div>
+        <div style="height:6px;background:var(--bg-secondary);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${priColors[i]};border-radius:3px"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function loadSettings() {
+    if (!currentUser) return;
+    document.getElementById('s-name').value  = currentUser.name  || '';
+    document.getElementById('s-email').value = currentUser.email || '';
+    document.getElementById('s-role').value  = currentUser.role  || '';
+  }
 
   // ── Auth ──────────────────────────────────────────────────────
   async function init() {
