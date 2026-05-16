@@ -7,79 +7,26 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body { font-family: Arial, sans-serif; display: flex; height: 100vh; overflow: hidden; }
 
-    /* Sidebar — hidden by default until logged in */
-    .sidebar {
-      width: 220px;
-      background: #0F6E56;
-      color: white;
-      padding: 1rem;
-      display: none; /* hidden until logged in */
-      flex-direction: column;
-      gap: 6px;
-    }
+    .sidebar { width: 220px; background: #0F6E56; color: white; padding: 1rem; display: none; flex-direction: column; gap: 6px; }
     .sidebar.visible { display: flex; }
-
-    .sidebar-brand {
-      font-size: 18px; font-weight: 700;
-      padding: 0.5rem 0 1rem;
-      border-bottom: 1px solid rgba(255,255,255,0.2);
-      margin-bottom: 0.5rem;
-      display: flex; align-items: center; gap: 8px;
-    }
-
-    .nav-label {
-      font-size: 10px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.08em;
-      color: rgba(255,255,255,0.5);
-      padding: 0.5rem 0 0.25rem 0.5rem;
-    }
-
-    .sidebar button {
-      padding: 10px 12px;
-      border: none; cursor: pointer;
-      border-radius: 8px;
-      font-weight: 500; font-size: 13px;
-      background: transparent; color: rgba(255,255,255,0.85);
-      text-align: left; width: 100%;
-      display: flex; align-items: center; gap: 8px;
-      transition: background 0.15s;
-    }
+    .sidebar-brand { font-size: 18px; font-weight: 700; padding: 0.5rem 0 1rem; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px; }
+    .nav-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.5); padding: 0.5rem 0 0.25rem 0.5rem; }
+    .sidebar button { padding: 10px 12px; border: none; cursor: pointer; border-radius: 8px; font-weight: 500; font-size: 13px; background: transparent; color: rgba(255,255,255,0.85); text-align: left; width: 100%; display: flex; align-items: center; gap: 8px; transition: background 0.15s; }
     .sidebar button:hover { background: rgba(255,255,255,0.12); color: white; }
     .sidebar button.active { background: rgba(255,255,255,0.18); color: white; }
-
-    .sidebar-footer {
-      margin-top: auto;
-      border-top: 1px solid rgba(255,255,255,0.15);
-      padding-top: 1rem;
-    }
-    .user-info {
-      font-size: 12px; color: rgba(255,255,255,0.7);
-      padding: 0 0.25rem 0.75rem;
-    }
+    .sidebar-footer { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 1rem; }
+    .user-info { font-size: 12px; color: rgba(255,255,255,0.7); padding: 0 0.25rem 0.75rem; }
     .user-info strong { display: block; color: white; font-size: 13px; }
-
-    .btn-logout {
-      background: rgba(255,255,255,0.1) !important;
-      color: rgba(255,255,255,0.8) !important;
-    }
+    .btn-logout { background: rgba(255,255,255,0.1) !important; color: rgba(255,255,255,0.8) !important; }
     .btn-logout:hover { background: rgba(255,255,255,0.2) !important; }
-
-    /* Main iframe area */
     .main { flex: 1; height: 100vh; }
     iframe { width: 100%; height: 100%; border: none; }
 
-    /* Mobile */
     @media (max-width: 768px) {
       body { flex-direction: column; }
-      .sidebar {
-        width: 100%; flex-direction: row;
-        overflow-x: auto; padding: 0.5rem;
-        flex-wrap: nowrap; align-items: center;
-        height: auto;
-      }
+      .sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 0.5rem; flex-wrap: nowrap; align-items: center; height: auto; }
       .sidebar-brand { padding: 0 0.5rem 0 0; border: none; margin: 0; font-size: 15px; }
       .nav-label { display: none; }
       .sidebar-footer { margin: 0; border: none; padding: 0; display: flex; align-items: center; gap: 6px; margin-left: auto; }
@@ -91,61 +38,45 @@
 </head>
 <body>
 
-  <!-- Sidebar (shown after login) -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-brand">🚚 TrackMate</div>
-
-    <div class="nav-label" id="nav-section-label">Main</div>
+    <div class="nav-label">Main</div>
     <button id="btn-dashboard" onclick="loadPage('delivery-management.html', this)">📦 Dashboard</button>
     <button id="btn-driver" onclick="loadPage('driver-dashboard.html', this)" style="display:none">🚗 My Deliveries</button>
-
     <div class="sidebar-footer">
-      <div class="user-info">
-        Signed in as<strong id="sidebar-user">—</strong>
-      </div>
+      <div class="user-info">Signed in as<strong id="sidebar-user">—</strong></div>
       <button class="btn-logout" onclick="logout()">🚪 Sign out</button>
     </div>
   </div>
 
-  <!-- Main content -->
   <div class="main">
     <iframe id="frame" src="login.html"></iframe>
   </div>
 
   <script>
-    // ── Supabase ──────────────────────────────────────────────
-   const supabaseUrl = 'https://utnsjhctknioiptukfgv.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0bnNqaGN0a25pb2lwdHVrZmd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MjEyODksImV4cCI6MjA5NDA5NzI4OX0.A5SXWA0ZjksVGv8vMOZIcKHhLpGusdcOzqWI9d4HKSs'
+    const SUPABASE_URL = 'https://utnsjhctknioiptukfgv.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0bnNqaGN0a25pb2lwdHVrZmd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MjEyODksImV4cCI6MjA5NDA5NzI4OX0.A5SXWA0ZjksVGv8vMOZIcKHhLpGusdcOzqWI9d4HKSs';
+    const { createClient } = window.supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const supabase = window.supabase.createClient(
-  supabaseUrl,
-  supabaseKey
-)
-    const frame    = document.getElementById('frame');
-    const sidebar  = document.getElementById('sidebar');
+    const frame   = document.getElementById('frame');
+    const sidebar = document.getElementById('sidebar');
     let currentUser = null;
 
-    // ── Check session on load ─────────────────────────────────
     async function checkSession() {
-      const { data: { session } } = await db.auth.getSession();
-      if (session) {
-        const { data: profile } = await db
-          .from('profiles').select('*').eq('id', session.user.id).single();
-        if (profile) {
-          showDashboard(profile);
-        } else {
-          showLogin();
+      try {
+        const { data: { session } } = await db.auth.getSession();
+        if (session) {
+          const { data: profile } = await db.from('profiles').select('*').eq('id', session.user.id).single();
+          if (profile) { showDashboard(profile); return; }
         }
-      } else {
         showLogin();
-      }
+      } catch (e) { showLogin(); }
     }
 
-    // ── Listen for auth changes (login/logout from iframe) ────
     db.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        const { data: profile } = await db
-          .from('profiles').select('*').eq('id', session.user.id).single();
+        const { data: profile } = await db.from('profiles').select('*').eq('id', session.user.id).single();
         if (profile) showDashboard(profile);
       } else if (event === 'SIGNED_OUT') {
         showLogin();
@@ -162,7 +93,6 @@ const supabase = window.supabase.createClient(
       currentUser = profile;
       sidebar.classList.add('visible');
       document.getElementById('sidebar-user').textContent = profile.name;
-
       if (profile.role === 'admin') {
         document.getElementById('btn-dashboard').style.display = 'flex';
         document.getElementById('btn-driver').style.display = 'none';
